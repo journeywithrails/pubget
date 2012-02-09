@@ -1,0 +1,152 @@
+= Pubget paths
+
+* http://github.com/pubget/pubget_paths
+
+== DESCRIPTION
+
+These are required initializes and paths functions to run greps for the Pubget environment.
+
+To generate HTML docs, type "rdoc lib" from this directory. To view them, open docs/index.html in a web browser.
+
+== Dependencies
+
+* ruby 1.8.7
+* unix or OSX (will not run on windows)
+
+== SUPPORT:
+
+The bug tracker is available here:
+
+  * http://github.com/pubget/pubget_paths/issues
+
+=== Setup
+
+This includes a dummy rails project that can be used to run the project. To install dependancies, you need to run:
+
+    bundle install --gemfile=test/dummy/Gemfile
+
+This gem will mock enough of rails in the dummy directory so you can run the gem without a separate rails environment.
+
+=== Tests
+
+To test all methods that are present should be present, run:
+
+    ruby test/greps/grep_test.rb
+
+To test just one publisher like nature, run:
+
+    ruby test/greps/grep_test.rb --name=test_nature
+
+To fast check single PMID, please run:
+
+    ruby run.rb -i PMID -p publisher_name
+
+=== Debugger tips
+
+As we have the debugger gem in there, so you can break in with debugger as needed - that a good way to debug:
+
+   sudo gem install ruby-debug
+
+(this will also work for rvm).
+
+=== Objective of pdf_url
+
+This gem is included in our main rails application and has the purpose of finding where PDFs and full text documents live on the publisher's websites.
+
+This code is broken down per publishers (that each has its own class based on Publisher::Base). The main function to find the PDFs and HTML URLs is pdf_url which accepts parmas that include the :article. This Article is the object that has all the values that are needed to find the PDF or HTML full text. An Article is a published paper in an academic journal.
+
+The normal way to look up a PDF url is to first find the journal's base URL and then navigate the publisher's site to find the PDF. Sometimes, it is possible to follow the DOI or other means and it will vary from publisher to publisher (this is why we separate the code per publisher like this). 
+
+It is useful to look at a few example publishers and follow the code to see how we get the 'title', 'volume', 'issue' and other information from the article and use this to find the PDF (or HTML url). The HTML url goes into article.url where the pdf is returned from pdf_url.
+
+The issues tend to have a publisher, the paper/article pmid (id) and the expected URL or PDF URL that you should be able to find. These are added to the grep_test.rb and then the pdf_url method inside the publisher can be fixed to make the test pass.
+
+=== Digital Object Identifier (DOI®) System
+
+The Digital Object Identifier (DOI®) System is for identifying content objects in the digital environment http://www.doi.org/. Many publisher support DOIs for a number of their papers and it can be the only way to link to their papers. DOIs can be looked up via the crossref site (we have an agreement to do this) or by visiting the publisher and locating the DOI via the issue page or searching on their site.
+
+Often if you can find the DOI, it makes the PDF URL easier to find (or in some cases just the DOI needs to be put into a URL to get the location).
+
+=== ISSN
+
+The ISSN is a standardized international code which allows the identification of any journal (http://www.issn.org/2-22635-What-is-an-ISSN.php). There can be more than one ISSN per journal as well as print and electronic ISSNs. article.issn is an array of ISSNs (article.pissn, article.eissn) but we found most publishers tend to link via the electronic ISSN.
+
+=== Open URL
+
+This is a term that is often abused. If you search, it will say it is a standard for linking to journals, issues and articles. However, each publisher has their own way of linking from an ISSN, volume, issue and page to an article. If you know the publisher you can google for their open url guide or page on how to link. Often knowing how to link and putting the volume, issue, etc into this Open URL will be a good start to get to the path. Having said that, it is often broken and you may be better off just linking at the URLs when navigating the publisher site. It might become clear after clicking around how they construct the URL and where the volume, issue, etc go and just using those patterns.
+
+Acronyms in common use can be found here: http://dl.dropbox.com/u/4482603/Metadata-Acronyms.pdf
+
+=== Common lookup pattern
+
+We have included a string diff function that can help find titles on the table of content (issue) pages. If you know the volume and issue from the article, you can find the issue page for that journal and then match the title on the page. However, often the title is not an exact match but a few charaters different. If you look at the match loop in https://github.com/pubget/pubget_paths/blob/master/lib/pubget_paths/publisher/annual_reviews.rb line 13, you will see we loop through the articles in an issue and then find the closest match to know the URL. 
+
+This is a common method to find an article. Here is an example for a publisher. Say you have an article that is pmid 11920382, and is in a journal with (volume 266 issue 4 and page 198 to 206). You can see the article on pubget at http://pubget.com/paper/11920382. 
+
+    article.issn = ["0003-276X", "1097-0185"]
+    wiley explains how to link to them here: http://info.onlinelibrary.wiley.com/view/0/faqs.html#Linking
+    which has an open url guide here: http://info.onlinelibrary.wiley.com/SpringboardWebApp/userfiles/wcp/file/WileyOnlineLibraryOpenURLv1_1.pdf (many publishers will have a guide how to link to volume, issues and articles via Open URL or DOI)
+    which says how to link to the issue here: "http://onlinelibrary.wiley.com/resolve/openurl?genre=issue&sid=vendor:database&issn=0003-276X&volume=266&issue=4
+   and then you want to search for the title on the page to find the relavant PDF link: http://onlinelibrary.wiley.com/doi/10.1002/ar.10057/pdf
+
+This is an example how to navigate from a known set of meta data (title, ISSN, volume, issue, page) to a paper. Once you have the paper, you can update the pdf url and even the DOI in the article.
+
+=== New publishers
+
+Sometimes a publisher needs to be added. This can be done by coping the template from another publisher and added a new file that has a pdf_url and issue method. These can be added if needed and attached to an issue.
+
+=== Info methods
+
+To know which journals are available on each of the publishers, there is an info method. This method will call update_source with the ISSN, title, base_url and other information available via the publisher site.
+
+=== Commit guidelines
+
+Please include the issue number in the commit preceded by the hash (#) character (see https://github.com/blog/831-issues-2-0-the-next-generation). This does not need to follow a 'fixes' or 'closed' but just include
+it so that we can see what commits are for which issues.
+
+You must keep your diffs down the the minimum. Do not add extra spaces or remove extra spaces on lines that you do not need to change. Also, keep the tab set as two spaces and not reformat the code unless you are changing it. If your IDE reformats code, please disable this feature so that only the minimum diff is committed to keep the issue clean and self contained. We code review almost every commit so if the diffs are bigger than they need to be, we will be spending time looking into lines that just contain space changes which takes extra time and therefore money.
+
+=== Don't break the build
+
+If you are working on a long change, you can commit locally but do not push until you have the tests passing. If you push code with broken tests, this will break our continuous build and send alerts to our team.
+
+== Authors
+
+Copyright (c) 2011 by Pubget Inc
+
+== Acknowledgments
+
+Pubget Inc
+300 Summer St
+Boston, MA 02210
+
+== License
+
+Copyright (c) 2011 Pubget - all rights reserved
+
+== Confidential Agreement
+
+By using this code and agreeing to work on this, you agree to treat is as private and confidential information.
+
+“Confidential Information” shall mean any and all information and documents relating to the business of the Disclosing Party that are (or are reasonably understood to be) of a confidential or proprietary nature and are provided by the Disclosing Party to the Receiving Party, whether before, on or after the date of this Agreement, either directly or indirectly, in writing, electronically, orally, by inspection of tangible objects, or otherwise.  "Confidential Information" includes, without limitation, products and services under development, source codes, software and software technology, computer programs, related documentation and manuals, formulas, inventions, techniques, processes, programs, prototypes, diagrams, schematics, technical information, customer and financial information, sales and marketing plans, any business strategies or arrangements, editorial plans, systems architecture, intellectual property, technical data, trade secrets or know-how, research initiatives, customer and subscriber lists, email directories and databases, user databases and other data about users, and engineering and hardware configuration information. Confidential Information of the Disclosing Party may also include such information disclosed to the Receiving Party by third parties.  Confidential Information disclosed to the Receiving Party by any officer, director, employee, agent or affiliate of the Disclosing Party is covered by this Agreement.  
+Use of Confidential Information.  The Receiving Party shall not use or disclose and shall keep confidential any and all Confidential Information other than to explore a potential business relationship between the parties and/or to perform its obligations under any such relationship entered into by the parties, and shall use the same care as the Receiving Party uses to maintain the confidentiality of its confidential information, but in no event less than reasonable care.  The Receiving Party may disclose Confidential Information only to its officers, directors, employees, consultants, agents or advisors to whom such disclosure is necessary to evaluate, and engage in discussions concerning, the potential business relationship and/or for the Receiving Party to perform its obligations under any such relationship, and who are bound by the terms hereof or similar confidentiality obligations. The Receiving Party acknowledges that the remedy at law for any breach of the foregoing provisions of this paragraph shall be inadequate and that the Disclosing Party shall be entitled to obtain injunctive relief against any such breach or threatened breach, without posting any bond, in addition to any other remedy available to it.  Notwithstanding any other provision of this Agreement, the Receiving Party may disclose Confidential Information pursuant to any governmental, judicial or administrative order, subpoena or discovery request, provided that the Receiving Party uses reasonable efforts to notify the Disclosing Party sufficiently in advance of such order, subpoena, or discovery request so that the Disclosing Party may seek to object to such order, subpoena or request, or to make such disclosure subject to a protective order or confidentiality agreement. The Receiving Party shall not reverse engineer, disassemble or decompile any prototypes, software or other tangible objects which embody the Disclosing Party's Confidential Information and which are provided to the Receiving Party hereunder. The Receiving Party agrees that it shall take reasonable measures to protect the secrecy of and avoid disclosure and unauthorized use of the Confidential Information of the Disclosing Party. The Receiving Party shall reproduce the Disclosing Party's proprietary rights notices on any copies of Confidential Information, in the same manner in which such notices were set forth in or on the original. 
+“Confidential Information” shall not include information that (a) at the time of use or disclosure by the Receiving Party, is in the public domain through no fault of, action or failure to act by the Receiving Party; (b) becomes known to the Receiving Party from a third-party source without violation of any obligation of confidentiality or other wrongful or tortious act; (c) was known by the Receiving Party prior to disclosure of such information by the Disclosing Party to the Receiving Party; or (d) was independently developed by the Receiving Party without any use of Confidential Information.
+Warranty.  ALL CONFIDENTIAL INFORMATION IS PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND. THE RECEIVING PARTY AGREES THAT THE DISCLOSING PARTY SHALL NOT BE LIABLE FOR ANY DAMAGES WHATSOEVER RELATING TO THE RECEIVING PARTY'S USE OF SUCH CONFIDENTIAL INFORMATION.
+Return of Confidential Information.  The Receiving Party shall immediately destroy or return all tangible and, to the extent practicable, intangible material in its possession or control embodying the Disclosing Party’s Confidential Information (in any form and including, without limitation, all summaries, copies and excerpts of Confidential Information) upon the earlier of (a) the completion or termination of the dealings between the parties or (b) such time as the Disclosing Party may so request. The Disclosing Party may require that the Receiving Party will provide a certificate stating that the Receiving Party has complied with the foregoing requirements. 
+Notice of Breach.  The Receiving Party shall notify the Disclosing Party immediately upon discovery of any unauthorized use or disclosure of Confidential Information and shall cooperate with the Disclosing Party in every reasonable way to help the Disclosing Party regain possession of Confidential Information and prevent its further unauthorized use.
+Publicity; Relationship.  Neither party shall make any representations, give any warranties or enter into any negotiations or agreements with third parties on behalf of the other party. Each party agrees that all press releases, announcements or other forms of publicity made by such party concerning any joint activity or business relationship between the parties must be pre-approved in writing by the other party.
+Non-waiver.  Any failure by the Disclosing Party to enforce the Receiving Party’s strict performance, or any waiver by the Disclosing Party, of any provision of this Agreement shall not constitute a waiver of the Disclosing Party’s right to subsequently enforce such provision or any other provision of this Agreement.
+No License.  Nothing in this Agreement is intended to grant any ownership or other rights to either party under any patent, trademark or copyright of the other party, nor shall this Agreement grant any party any ownership or other rights in or to the Confidential Information of the other party except as expressly set forth herein. 
+No Obligation.  Nothing in this Agreement shall impose any obligation upon either party to consummate a transaction with the other or upon either party to enter into discussions or negotiations with respect thereto.
+Term.  The obligations of each Receiving Party hereunder shall survive until the earlier of (a) two (2) years from the date of this Agreement, or (b) such time as all Confidential Information disclosed hereunder is in the public domain through no fault of, action or failure to act by the Receiving Party.
+Miscellaneous.
+
+This Agreement shall be governed by and construed in accordance with the laws of the State of Massachuessetts without regard to the conflicts of law principles of such State.  All actions in connection with this Agreement shall be brought only in the state or federal courts sitting in the City, County and State of New York.  Those courts shall have jurisdiction over the parties in connection with any such lawsuit and venue shall be appropriate in those courts.  Process may be served in any manner permitted by the rules of the court having jurisdiction.
+Any notice required or permitted under this Agreement shall be in writing and delivered by personal delivery, a nationally-recognized express courier assuring overnight delivery, confirmed facsimile transmission or first-class certified or registered mail, return receipt requested, and will be deemed given (i) upon personal delivery; (ii) one (1) business day after deposit with the express courier or confirmation of receipt of facsimile; or (iii) five (5) days after deposit in the mail.  Such notice shall be sent to the party for which intended at the address set forth below its signature hereto or at such other address as that party may specify in writing pursuant to this section, and, in the case of the worker via email or odes notification,  and in the case of Pubget Inc, with a copy to: 300 Summer St, Boston MA 02141, Attn: Ian Connor or via email to iconnor@pubget.com or odesk notification to iconnor.
+In the event that any one or more of the provisions of this Agreement shall be held invalid, illegal or unenforceable in any respect, or the validity, legality and enforceability of any one or more of the provisions contained herein shall be held to be excessively broad as to duration, activity or subject, such provision shall be construed by limiting and reducing such provision so as to be enforceable to the maximum extent compatible with applicable law.
+In any action to enforce any of the terms or provisions of this Agreement or on account of the breach hereof, the prevailing party shall be entitled to recover all its expenses, including, without limitation, reasonable attorneys’ fees.
+This Agreement shall inure to the benefit of, and be binding upon, the parties and their respective successors and assigns; provided that neither party may assign this Agreement without the prior, written consent of the other party.
+Execution and acceptance of this agreement may be evidenced by pulling the git repository from github or downloading any portion except the README by web browser or any other means.
+
+
+

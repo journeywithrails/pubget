@@ -1,0 +1,9 @@
+source 'http://rubygems.org'
+gem 'rails', '3.0.7'
+gem 'sqlite3'
+gem 'ruby-debug'
+gem 'nokogiri'
+gem 'htmlentities'
+gem 'json'
+gem "mechanize", "0.9.2", :require => "mechanize"
+gem "fastercsv", :require => "fastercsv"
